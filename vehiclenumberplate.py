@@ -1,12 +1,13 @@
 from flask import Flask, request, jsonify
-import easyocr
-import numpy as np
 import cv2
-from PIL import Image
-import io
+import numpy as np
+import pytesseract
+import os
 
 app = Flask(__name__)
-reader = easyocr.Reader(['en'])
+
+# Configure pytesseract (Render uses Linux)
+pytesseract.pytesseract.tesseract_cmd = "/usr/bin/tesseract"
 
 @app.route('/readnumberplate', methods=['POST'])
 def read_number_plate():
@@ -14,20 +15,15 @@ def read_number_plate():
         return jsonify({"error": "No image uploaded"}), 400
 
     file = request.files['imageFile']
-    image_bytes = file.read()
-    npimg = np.frombuffer(image_bytes, np.uint8)
-    img = cv2.imdecode(npimg, cv2.IMREAD_COLOR)
+    image_np = np.frombuffer(file.read(), np.uint8)
+    image = cv2.imdecode(image_np, cv2.IMREAD_COLOR)
 
-    results = reader.readtext(img)
-    if results:
-        plate_text = max(results, key=lambda x: x[2])[1]  # most confident result
-    else:
-        plate_text = "Not detected"
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    # Optional: thresholding or noise removal
+    text = pytesseract.image_to_string(gray)
 
-    return jsonify({
-        "number_plate": plate_text,
-        "status": "success"
-    })
+    return jsonify({"number_plate": text.strip()})
 
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000)
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host='0.0.0.0', port=port)
