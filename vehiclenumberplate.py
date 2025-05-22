@@ -9,6 +9,10 @@ app = Flask(__name__)
 # Configure pytesseract (Render uses Linux)
 pytesseract.pytesseract.tesseract_cmd = "/usr/bin/tesseract"
 
+@app.route('/')
+def home():
+    return "Vehicle Number Plate Recognition API Running"
+
 @app.route('/readnumberplate', methods=['POST'])
 def read_number_plate():
     if 'imageFile' not in request.files:
